@@ -12,6 +12,7 @@ import Unsafe.Coerce (unsafeCoerce)
 
 data React i = Text String
   | Element (Exists ReactClass) (Array (Prop i)) (Array (React i))
+  | NamedElement String (Array (Prop i)) (Array (React i))
 
 data Prop i
   = Prop (Exists PropF)

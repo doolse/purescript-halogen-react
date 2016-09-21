@@ -1,5 +1,12 @@
 
-module Halogen.React.Driver where
+module Halogen.React.Driver (
+  ReactDriver,
+  ReactEffects,
+  ReactComponent,
+  reactComponent,
+  createReactClass
+)
+where
 
 import Prelude
 import Control.Coroutine.Stalling as SCR
@@ -27,7 +34,7 @@ import Halogen.Query.EventSource (runEventSource)
 import Halogen.Query.HalogenF (HalogenF, HalogenFP(..))
 import Halogen.Query.StateF (StateF(Modify, Get))
 import Halogen.React (PropsF(PropsF), runUncurriedEvent, runRenderable, HandlerF(..), PropF(PropF), Prop(..), React(..))
-import React (transformState, ReactThis, Refs, ReactElement, ReactClass, ReadWrite, ReactState, ReadOnly, ReactRefs, ReactProps, getRefs, getProps, readState, createElement, spec, createClass)
+import React (transformState, ReactThis, Refs, ReactElement, ReactClass, ReadWrite, ReactState, ReadOnly, ReactRefs, ReactProps, getRefs, getProps, readState, createElement, createElementTagName, spec, createClass)
 import React.DOM.Props (Props, unsafeMkProps, unsafeFromPropsArray)
 import Unsafe.Coerce (unsafeCoerce)
 
@@ -118,6 +125,7 @@ queryRef refs n f action = fromAff $ maybe (pure Nothing) sendAction (getRef ref
 renderReact :: forall f eff. ReactDriver f eff -> React (f Unit) -> ReactElement
 renderReact dr html = let go = renderReact dr in case html of
     (Text s) -> unsafeCoerce s
+    (NamedElement n props els) -> createElementTagName n  (runProps props) $ map go els
     (Element clazzE props els) -> runExists (\clazz -> createElement clazz (runProps props)) clazzE $ map go els
     where
       runProps :: forall props. (Array (Prop (f Unit))) -> props
