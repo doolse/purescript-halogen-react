@@ -1,0 +1,12 @@
+{
+  "name": "purescript-halogen-react",
+  "ignore": [
+    "**/.*",
+    "node_modules",
+    "bower_components"
+  ],
+  "dependencies": {
+    "purescript-halogen": "doolse/purescript-halogen#fix-unevent",
+    "purescript-react": "^1.1.0"
+  }
+}
