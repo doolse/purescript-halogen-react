@@ -3,8 +3,14 @@ module Halogen.React.Driver (
   ReactDriver,
   ReactEffects,
   ReactComponent,
+  PropsState,
   reactComponent,
-  createReactClass
+  reactLifecycleComponent,
+  createReactClass,
+  createReactPropsClass,
+  createReactPropsClassDriver,
+  createReactSpecDriver,
+  createReactPropsSpecDriver
 )
 where
 
@@ -33,15 +39,17 @@ import Halogen.Query (get, modify)
 import Halogen.Query.EventSource (runEventSource)
 import Halogen.Query.HalogenF (HalogenF, HalogenFP(..))
 import Halogen.Query.StateF (StateF(Modify, Get))
-import Halogen.React (PropsF(PropsF), runUncurriedEvent, runRenderable, HandlerF(..), PropF(PropF), Prop(..), React(..))
-import React (transformState, ReactThis, Refs, ReactElement, ReactClass, ReadWrite, ReactState, ReadOnly, ReactRefs, ReactProps, getRefs, getProps, readState, createElement, createElementTagName, spec, createClass)
+import Halogen.React (PropsF(PropsF), runUncurriedEvent, HandlerF(..), PropF(PropF), Prop(..), React(..))
+import React (createClass, ReactSpec, transformState, ReactThis, Refs, ReactElement, ReactClass, ReadWrite, ReactState, ReadOnly, ReactRefs, ReactProps, getRefs, getProps, readState, createElement, createElementTagName, spec)
 import React.DOM.Props (Props, unsafeMkProps, unsafeFromPropsArray)
 import Unsafe.Coerce (unsafeCoerce)
 
 type ReactEffects eff = (state::ReactState ReadWrite,props::ReactProps, refs::ReactRefs ReadOnly, err::EXCEPTION |eff)
 type ReactDriver f eff = f ~> Aff (ReactEffects eff)
 
-type ReactClassDriver p s s' f eff = {clazz::ReactClass p, driver:: ReactThis p s -> ReactDriver f eff}
+type ReactClassDriver p s f eff = {clazz::ReactClass p, driver:: ReactThis p s -> ReactDriver f eff}
+
+type ReactSpecDriver p s f eff = {spec::ReactSpec p s (err::EXCEPTION |eff), driver:: ReactThis p s -> ReactDriver f eff}
 
 foreign import createElementOneChild :: forall p. ReactClass p -> p -> ReactElement -> ReactElement
 
@@ -75,8 +83,8 @@ reactLifecycleComponent s = ReactComponent s
 createReactClass :: forall eff p s f. ReactComponent s f (Aff (ReactEffects eff)) -> s -> ReactClass p
 createReactClass c = (createReactClassDriver c) >>> _.clazz
 
-createReactClassDriver :: forall eff p s f. ReactComponent s f (Aff (ReactEffects eff)) -> s -> ReactClassDriver p s s f eff
-createReactClassDriver (ReactComponent rc) s = {clazz:createClass $ (spec s render) {componentDidMount=onMount}, driver:compDriver}
+createReactSpecDriver :: forall eff p s f. ReactComponent s f (Aff (ReactEffects eff)) -> s -> ReactSpecDriver p s f eff
+createReactSpecDriver (ReactComponent rc) s = {spec:(spec s render) {componentDidMount=onMount}, driver:compDriver}
   where
     compDriver = rnDrivers (\s p r -> s) id rc.eval
     onMount this = do
@@ -86,17 +94,25 @@ createReactClassDriver (ReactComponent rc) s = {clazz:createClass $ (spec s rend
       s <- readState this
       pure $ renderReact (compDriver this) (rc.render s)
 
+createReactClassDriver :: forall eff p s f. ReactComponent s f (Aff (ReactEffects eff)) -> s -> ReactClassDriver p s f eff
+createReactClassDriver rc s = case createReactSpecDriver rc s of
+  {spec,driver} -> {clazz:createClass spec, driver}
+
 
 type PropsState props state = {props::props, state::state, refs::Refs}
 
 modifyState :: forall p s f g. (s -> s) -> ComponentDSL (PropsState p s) f g Unit
 modifyState f = modify \s -> s {state=f s.state}
 
-createPropsClass :: forall eff p s f. ReactComponent (PropsState p s) f (Aff (ReactEffects eff)) -> s -> ReactClass p
-createPropsClass c = (createPropsClassDriver c) >>> _.clazz
+createReactPropsClass :: forall eff p s f. ReactComponent (PropsState p s) f (Aff (ReactEffects eff)) -> s -> ReactClass p
+createReactPropsClass c = (createReactPropsClassDriver c) >>> _.clazz
 
-createPropsClassDriver :: forall eff p s f. ReactComponent (PropsState p s) f (Aff (ReactEffects eff)) -> s -> ReactClassDriver p s (PropsState p s) f eff
-createPropsClassDriver (ReactComponent rc) s = {clazz:createClass $ (spec s render) {componentDidMount=onMount}, driver:compDriver}
+createReactPropsClassDriver :: forall eff p s f. ReactComponent (PropsState p s) f (Aff (ReactEffects eff)) -> s -> ReactClassDriver p s f eff
+createReactPropsClassDriver rc s = case createReactPropsSpecDriver rc s of
+  {spec,driver} -> {clazz:createClass spec, driver}
+
+createReactPropsSpecDriver :: forall eff p s f. ReactComponent (PropsState p s) f (Aff (ReactEffects eff)) -> s -> ReactSpecDriver p s f eff
+createReactPropsSpecDriver (ReactComponent rc) s = {spec:(spec s render) {componentDidMount=onMount}, driver:compDriver}
   where
     compDriver this = rnDrivers (\state props refs -> {props,state,refs}) _.state rc.eval this
     onMount this = do
@@ -123,11 +139,13 @@ queryRef refs n f action = fromAff $ maybe (pure Nothing) sendAction (getRef ref
   where sendAction this = Just <$> (f this action)
 
 renderReact :: forall f eff. ReactDriver f eff -> React (f Unit) -> ReactElement
-renderReact dr html = let go = renderReact dr in case html of
+renderReact dr html = case html of
     (Text s) -> unsafeCoerce s
+    (RenderedElement r) -> r
     (NamedElement n props els) -> createElementTagName n  (runProps props) $ map go els
     (Element clazzE props els) -> runExists (\clazz -> createElement clazz (runProps props)) clazzE $ map go els
     where
+      go = renderReact dr
       runProps :: forall props. (Array (Prop (f Unit))) -> props
       runProps p = unsafeFromPropsArray (map renderProp p)
 
@@ -135,7 +153,7 @@ renderReact dr html = let go = renderReact dr in case html of
       renderProp (Prop e) = runExists (\(PropF key value) -> unsafeMkProps (runPropName key) value) e
       renderProp (Props e) = runExists (\(PropsF v) -> unsafeCoerce v) e
       renderProp (Handler e) = runExists renderHandler e
-      renderProp (Renderable n r) = unsafeMkProps n $ runRenderable (renderReact dr) r
+      renderProp (Renderable r) = renderProp (r go)
       renderProp (ParentRef n) = unsafeMkProps n dr
 
       renderHandler :: forall event. HandlerF (f Unit) event -> Props

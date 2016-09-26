@@ -9,7 +9,7 @@ import Data.Maybe (maybe, Maybe)
 import Data.Nullable (toMaybe, Nullable)
 import Halogen.HTML.Core (propName)
 import Halogen.HTML.Events.Handler (EventHandler)
-import Halogen.React (PropsF(PropsF), RenderableF, mkHandler2, PropF(PropF), HandlerF(..), Prop(ParentRef, Props, Renderable, Handler, Prop))
+import Halogen.React (PropsF(PropsF), mkHandler2, PropF(PropF), HandlerF(..), Prop(ParentRef, Props, Handler, Prop))
 import Halogen.React.Driver (ReactEffects)
 import React (ReactThis)
 
@@ -36,9 +36,6 @@ props v = Props $ mkExists $ PropsF v
 
 prop :: forall value i. String -> value -> Prop i
 prop n v = Prop $ mkExists $ PropF (propName n) v
-
-renderProp :: forall i. String -> RenderableF i -> Prop i
-renderProp = Renderable
 
 key :: forall i a. a -> Prop i
 key a = prop "key" a

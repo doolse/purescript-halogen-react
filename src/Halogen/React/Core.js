@@ -11,5 +11,4 @@ function proxyCall (f) {
   }
 }
 
-exports.runRenderable = proxyCall
 exports.runUncurriedEvent = proxyCall
