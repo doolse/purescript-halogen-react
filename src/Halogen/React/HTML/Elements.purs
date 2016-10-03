@@ -17,6 +17,9 @@ h1_ = h1 []
 text :: forall i. String -> React i
 text = Text
 
+a :: forall i. Array (Prop i) -> Array (React i) -> React i
+a = NamedElement "a"
+
 p :: forall i. Array (Prop i) -> Array (React i) -> React i
 p = NamedElement "p"
 

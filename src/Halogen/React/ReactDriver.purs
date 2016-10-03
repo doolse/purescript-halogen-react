@@ -3,10 +3,16 @@ module Halogen.React.Driver (
   ReactDriver,
   ReactEffects,
   ReactComponent,
+  ReactComponentSpec,
+  ReactClassDriver,
   PropsState,
+  modifyState,
+  interpretEval,
+  interpretComponent,
   reactComponent,
   reactLifecycleComponent,
   createReactClass,
+  createReactClassDriver,
   createReactPropsClass,
   createReactPropsClassDriver,
   createReactSpecDriver,
@@ -24,7 +30,7 @@ import Control.Monad.Eff.Class (liftEff)
 import Control.Monad.Eff.Exception (EXCEPTION, error, throwException)
 import Control.Monad.Eff.Unsafe (unsafePerformEff)
 import Control.Monad.Except (throwError)
-import Control.Monad.Free (runFreeM)
+import Control.Monad.Free (hoistFree, runFreeM)
 import Control.Monad.Rec.Class (forever)
 import Control.Monad.Writer (runWriter)
 import Data.Exists (runExists)
@@ -37,7 +43,7 @@ import Halogen.HTML.Core (runPropName)
 import Halogen.HTML.Events.Handler (unEventHandler)
 import Halogen.Query (get, modify)
 import Halogen.Query.EventSource (runEventSource)
-import Halogen.Query.HalogenF (HalogenF, HalogenFP(..))
+import Halogen.Query.HalogenF (hoistHalogenF, HalogenF, HalogenFP(..))
 import Halogen.Query.StateF (StateF(Modify, Get))
 import Halogen.React (PropsF(PropsF), runUncurriedEvent, HandlerF(..), PropF(PropF), Prop(..), React(..))
 import React (createClass, ReactSpec, transformState, ReactThis, Refs, ReactElement, ReactClass, ReadWrite, ReactState, ReadOnly, ReactRefs, ReactProps, getRefs, getProps, readState, createElement, createElementTagName, spec)
@@ -76,6 +82,12 @@ reactComponent spec =
     , initializer: Nothing
     , finalizer: Nothing
     }
+
+interpretEval :: forall s f g g'. Functor g' => f ~> ComponentDSL s f g -> g ~> g' -> f ~> ComponentDSL s f g'
+interpretEval eval nat = hoistFree (hoistHalogenF nat) <<< eval
+
+interpretComponent :: forall s f g g'. Functor g' => g ~> g' -> ReactComponent s f g -> ReactComponent s f g'
+interpretComponent nat (ReactComponent spec) = ReactComponent $ spec {eval=interpretEval spec.eval nat}
 
 reactLifecycleComponent :: forall s f g. LifecycleReactComponentSpec s f g -> ReactComponent s f g
 reactLifecycleComponent s = ReactComponent s
