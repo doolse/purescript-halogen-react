@@ -20,4 +20,4 @@ id_ :: forall i. String -> Prop i
 id_ = prop "id"
 
 value :: forall i a. a -> Prop i
-value = prop "value" 
+value = prop "value"
