@@ -21,3 +21,6 @@ id_ = prop "id"
 
 value :: forall i a. a -> Prop i
 value = prop "value"
+
+label :: forall i. String -> Prop i
+label = prop "label"

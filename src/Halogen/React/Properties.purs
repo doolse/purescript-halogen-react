@@ -9,7 +9,7 @@ import Data.Maybe (maybe, Maybe)
 import Data.Nullable (toMaybe, Nullable)
 import Halogen.HTML.Core (propName)
 import Halogen.HTML.Events.Handler (EventHandler)
-import Halogen.React (PropsF(PropsF), mkHandler2, PropF(PropF), HandlerF(..), Prop(ParentRef, Props, Handler, Prop))
+import Halogen.React (mkHandler3, React, PropsF(PropsF), mkHandler2, PropF(PropF), HandlerF(..), Prop(Renderable, ParentRef, Props, Handler, Prop))
 import Halogen.React.Driver (ReactEffects)
 import React (ReactThis)
 
@@ -22,8 +22,14 @@ handler1 name handler = Handler (mkExists (HandleUnit name handler))
 handler2 :: forall a b e i. String -> (a -> b -> e) -> (e -> EventHandler (Maybe i)) -> Prop i
 handler2 name toEv handler = Handler (mkExists (HandleUncurried name (mkHandler2 toEv) handler))
 
+handler3 :: forall a b c e i. String -> (a -> b -> c -> e) -> (e -> EventHandler (Maybe i)) -> Prop i
+handler3 name toEv handler = Handler (mkExists (HandleUncurried name (mkHandler3 toEv) handler))
+
 handlerAff :: forall e i. String -> (e -> EventHandler (Maybe i)) -> Prop i
 handlerAff name handler = Handler (mkExists (HandleAff name handler))
+
+renderedProp :: forall i. String -> React i -> Prop i
+renderedProp n r = Renderable (\render -> prop n $ render r)
 
 parentRef :: forall i. String -> Prop i
 parentRef = ParentRef

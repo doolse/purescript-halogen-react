@@ -49,3 +49,6 @@ tr = NamedElement "tr"
 
 td :: forall i. Array (Prop i) -> Array (React i) -> React i
 td = NamedElement "td"
+
+br :: forall i. React i
+br = NamedElement "br" [] []
