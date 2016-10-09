@@ -24,3 +24,6 @@ value = prop "value"
 
 label :: forall i. String -> Prop i
 label = prop "label"
+
+disabled :: forall i. Boolean -> Prop i
+disabled = prop "disabled"

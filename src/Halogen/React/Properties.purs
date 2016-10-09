@@ -8,12 +8,14 @@ import Data.Exists (mkExists)
 import Data.Maybe (maybe, Maybe)
 import Data.Nullable (toMaybe, Nullable)
 import Halogen.HTML.Core (propName)
+import Halogen.HTML.Events (Event)
 import Halogen.HTML.Events.Handler (EventHandler)
 import Halogen.React (mkHandler3, React, PropsF(PropsF), mkHandler2, PropF(PropF), HandlerF(..), Prop(Renderable, ParentRef, Props, Handler, Prop))
 import Halogen.React.Driver (ReactEffects)
 import React (ReactThis)
 
-type EventProp e i = (e -> EventHandler (Maybe i)) -> Prop i
+type HandlerProp e i = (e -> EventHandler (Maybe i)) -> Prop i
+type EventProp e i = (Event e -> EventHandler (Maybe i)) -> Prop i
 type AffHandler eff = Aff (ReactEffects eff) Unit
 
 handler1 :: forall e i. String -> (e -> EventHandler (Maybe i)) -> Prop i
@@ -49,7 +51,7 @@ key a = prop "key" a
 ref :: forall i. String  -> Prop i
 ref = prop "ref"
 
-onRef :: forall p s i. EventProp (ReactThis p s) i
+onRef :: forall p s i. HandlerProp (ReactThis p s) i
 onRef = handler1 "ref"
 
 onRefEff :: forall p s i eff. (ReactThis p s -> Eff eff Unit) -> Prop i
