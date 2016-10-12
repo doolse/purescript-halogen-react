@@ -162,6 +162,7 @@ renderReact dr html = case html of
       runProps p = unsafeFromPropsArray (map renderProp p)
 
       renderProp :: Prop (f Unit) -> Props
+      renderProp NoOp = unsafeFromPropsArray []
       renderProp (Prop e) = runExists (\(PropF key value) -> unsafeMkProps (runPropName key) value) e
       renderProp (Props e) = runExists (\(PropsF v) -> unsafeCoerce v) e
       renderProp (Handler e) = runExists renderHandler e

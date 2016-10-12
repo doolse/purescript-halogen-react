@@ -5,12 +5,12 @@ import Control.Monad.Aff (Aff)
 import Control.Monad.Eff (Eff)
 import Control.Monad.Eff.Unsafe (unsafePerformEff)
 import Data.Exists (mkExists)
-import Data.Maybe (maybe, Maybe)
+import Data.Maybe (Maybe, maybe)
 import Data.Nullable (toMaybe, Nullable)
 import Halogen.HTML.Core (propName)
 import Halogen.HTML.Events (Event)
 import Halogen.HTML.Events.Handler (EventHandler)
-import Halogen.React (mkHandler3, React, PropsF(PropsF), mkHandler2, PropF(PropF), HandlerF(..), Prop(Renderable, ParentRef, Props, Handler, Prop))
+import Halogen.React (mkHandler3, React, PropsF(PropsF), mkHandler2, PropF(PropF), HandlerF(..), Prop(NoOp, Renderable, ParentRef, Props, Handler, Prop))
 import Halogen.React.Driver (ReactEffects)
 import React (ReactThis)
 
@@ -44,6 +44,9 @@ props v = Props $ mkExists $ PropsF v
 
 prop :: forall value i. String -> value -> Prop i
 prop n v = Prop $ mkExists $ PropF (propName n) v
+
+propMaybe :: forall value i. String -> Maybe value -> Prop i
+propMaybe n v = maybe NoOp (prop n) v
 
 key :: forall i a. a -> Prop i
 key a = prop "key" a

@@ -17,6 +17,7 @@ data React i = Text String
 
 data Prop i
   = Prop (Exists PropF)
+  | NoOp
   | ParentRef String
   | Props (Exists PropsF)
   | Handler (Exists (HandlerF i))
