@@ -16,7 +16,9 @@ module Halogen.React.Driver (
   createReactPropsClass,
   createReactPropsClassDriver,
   createReactSpecDriver,
-  createReactPropsSpecDriver
+  createReactPropsSpecDriver,
+  getDOMRef,
+  withDOMRef
 )
 where
 
@@ -33,6 +35,7 @@ import Control.Monad.Except (throwError)
 import Control.Monad.Free (hoistFree, runFreeM)
 import Control.Monad.Rec.Class (forever)
 import Control.Monad.Writer (runWriter)
+import DOM.HTML.Types (HTMLElement)
 import Data.Exists (runExists)
 import Data.Function.Uncurried (Fn2, runFn2)
 import Data.Maybe (Maybe(Just, Nothing), maybe)
@@ -140,11 +143,16 @@ foreign import getRefImpl :: forall p s. Fn2 Refs String (Nullable (ReactThis p 
 getRef :: forall p s. Refs -> String -> Maybe (ReactThis p s)
 getRef r n = toMaybe $ runFn2 getRefImpl r n
 
-withRef :: forall p s p' s' f eff. String -> (ReactThis p s -> Eff eff Unit) -> ComponentDSL (PropsState p' s') f (Aff eff) Unit
-withRef n f = do
+getDOMRef :: Refs -> String -> Maybe HTMLElement
+getDOMRef = unsafeCoerce <<< getRef
+
+withDOMRef ::forall eff p s f. String -> (HTMLElement -> Eff eff Unit) -> ComponentDSL (PropsState p s) f (Aff eff) Unit
+withDOMRef = withRef' getDOMRef
+
+withRef' :: forall a p s f eff. (Refs -> String -> Maybe a) -> String -> (a -> Eff eff Unit) -> ComponentDSL (PropsState p s) f (Aff eff) Unit
+withRef' g n f = do
   {refs} <- get
-  let r = getRef refs n
-  fromEff $ maybe (pure unit) f r
+  fromEff $ maybe (pure unit) f $ g refs n
 
 queryRef :: forall p s eff f a s' f'. Refs -> String -> (ReactThis p s -> ReactDriver f eff) -> f a -> ComponentDSL s' f' (Aff (ReactEffects eff)) (Maybe a)
 queryRef refs n f action = fromAff $ maybe (pure Nothing) sendAction (getRef refs n)
@@ -168,7 +176,8 @@ renderReact dr html = case html of
       renderProp (Handler e) = runExists renderHandler e
       renderProp (Renderable r) = renderProp (r go)
       renderProp (ParentRef n) = unsafeMkProps n dr
-
+      renderProp (UnsafeWithProp p f) = f (renderProp p)
+      
       renderHandler :: forall event. HandlerF (f Unit) event -> Props
       renderHandler h = case h of
         (HandleUnit name handler) -> unsafeMkProps name (execHandler handler)

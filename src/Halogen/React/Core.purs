@@ -22,6 +22,7 @@ data Prop i
   | Props (Exists PropsF)
   | Handler (Exists (HandlerF i))
   | Renderable ((React i -> ReactElement) -> Prop i)
+  | UnsafeWithProp (Prop i) (Props -> Props)
 
 newtype PropsF value = PropsF value
 data PropF value = PropF (PropName value) value
