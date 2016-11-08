@@ -18,7 +18,8 @@ module Halogen.React.Driver (
   createReactSpecDriver,
   createReactPropsSpecDriver,
   getDOMRef,
-  withDOMRef
+  withDOMRef,
+  withRef
 )
 where
 
@@ -149,6 +150,9 @@ getDOMRef = unsafeCoerce <<< getRef
 withDOMRef ::forall eff p s f. String -> (HTMLElement -> Eff eff Unit) -> ComponentDSL (PropsState p s) f (Aff eff) Unit
 withDOMRef = withRef' getDOMRef
 
+withRef :: forall eff p s f. String -> (ReactThis p s -> Eff eff Unit) -> ComponentDSL (PropsState p s) f (Aff eff) Unit
+withRef = withRef' (unsafeCoerce <<< getRef)
+
 withRef' :: forall a p s f eff. (Refs -> String -> Maybe a) -> String -> (a -> Eff eff Unit) -> ComponentDSL (PropsState p s) f (Aff eff) Unit
 withRef' g n f = do
   {refs} <- get
@@ -177,7 +181,7 @@ renderReact dr html = case html of
       renderProp (Renderable r) = renderProp (r go)
       renderProp (ParentRef n) = unsafeMkProps n dr
       renderProp (UnsafeWithProp p f) = f (renderProp p)
-      
+
       renderHandler :: forall event. HandlerF (f Unit) event -> Props
       renderHandler h = case h of
         (HandleUnit name handler) -> unsafeMkProps name (execHandler handler)

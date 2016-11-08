@@ -10,9 +10,9 @@ import Data.Nullable (toMaybe, Nullable)
 import Halogen.HTML.Core (propName)
 import Halogen.HTML.Events (Event)
 import Halogen.HTML.Events.Handler (EventHandler)
-import Halogen.React (mkHandler3, React, PropsF(PropsF), mkHandler2, PropF(PropF), HandlerF(..), Prop(NoOp, Renderable, ParentRef, Props, Handler, Prop))
+import Halogen.React (mkHandler3, React, PropsF(PropsF), mkHandler2, PropF(PropF), HandlerF(..), Prop(Renderable, NoOp, ParentRef, Props, Handler, Prop))
 import Halogen.React.Driver (ReactEffects)
-import React (ReactThis)
+import React (ReactElement, ReactThis)
 
 type HandlerProp e i = (e -> EventHandler (Maybe i)) -> Prop i
 type EventProp e i = (Event e -> EventHandler (Maybe i)) -> Prop i
@@ -29,6 +29,12 @@ handler3 name toEv handler = Handler (mkExists (HandleUncurried name (mkHandler3
 
 handlerAff :: forall e i. String -> (e -> EventHandler (Maybe i)) -> Prop i
 handlerAff name handler = Handler (mkExists (HandleAff name handler))
+
+renderableProp :: forall i. ((React i -> ReactElement) -> Prop i) -> Prop i
+renderableProp = Renderable
+
+renderable1 :: forall a i. String -> (a -> React i) -> Prop i
+renderable1 n f = Renderable (\r -> prop n $ (f >>> r))
 
 renderedProp :: forall i. String -> React i -> Prop i
 renderedProp n r = Renderable (\render -> prop n $ render r)
