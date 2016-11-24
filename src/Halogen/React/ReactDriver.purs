@@ -50,9 +50,10 @@ import Halogen.Query.EventSource (runEventSource)
 import Halogen.Query.HalogenF (hoistHalogenF, HalogenF, HalogenFP(..))
 import Halogen.Query.StateF (StateF(Modify, Get))
 import Halogen.React (PropsF(PropsF), runUncurriedEvent, HandlerF(..), PropF(PropF), Prop(..), React(..))
-import React (createClass, ReactSpec, transformState, ReactThis, Refs, ReactElement, ReactClass, ReadWrite, ReactState, ReadOnly, ReactRefs, ReactProps, getRefs, getProps, readState, createElement, createElementTagName, spec)
+import React (ReactClass, ReactElement, ReactProps, ReactRefs, ReactSpec, ReactState, ReactThis, ReadOnly, ReadWrite, Refs, createClass, createElement, createElementTagName, getProps, getRefs, readState, spec, transformState)
 import React.DOM.Props (Props, unsafeMkProps, unsafeFromPropsArray)
 import Unsafe.Coerce (unsafeCoerce)
+import React as React
 
 type ReactEffects eff = (state::ReactState ReadWrite,props::ReactProps, refs::ReactRefs ReadOnly, err::EXCEPTION |eff)
 type ReactDriver f eff = f ~> Aff (ReactEffects eff)
@@ -62,6 +63,21 @@ type ReactClassDriver p s f eff = {clazz::ReactClass p, driver:: ReactThis p s -
 type ReactSpecDriver p s f eff = {spec::ReactSpec p s (err::EXCEPTION |eff), driver:: ReactThis p s -> ReactDriver f eff}
 
 foreign import createElementOneChild :: forall p. ReactClass p -> p -> ReactElement -> ReactElement
+
+type EventHandler =
+  forall eff refs.
+    Eff ( props :: React.ReactProps
+        , state :: React.ReactState React.ReadWrite
+        , refs :: React.ReactRefs refs
+        | eff
+        ) Unit
+
+type LifecycleReactComponentSpec2 p s f g  = {
+    render :: ((f Unit) -> EventHandler) -> p -> s -> ReactElement
+  , eval :: f ~> (ComponentDSL s f g)
+  , initializer :: Maybe (f Unit)
+  , finalizer :: Maybe (f Unit)
+}
 
 type LifecycleReactComponentSpec s f g  = {
     render :: s -> React (f Unit)
@@ -100,7 +116,7 @@ createReactClass :: forall eff p s f. ReactComponent s f (Aff (ReactEffects eff)
 createReactClass c = (createReactClassDriver c) >>> _.clazz
 
 createReactSpecDriver :: forall eff p s f. ReactComponent s f (Aff (ReactEffects eff)) -> s -> ReactSpecDriver p s f eff
-createReactSpecDriver (ReactComponent rc) s = {spec:(spec s render) {componentDidMount=onMount}, driver:compDriver}
+createReactSpecDriver (ReactComponent rc) is = {spec:(spec is render) {componentDidMount=onMount}, driver:compDriver}
   where
     compDriver = rnDrivers (\s p r -> s) id rc.eval
     onMount this = do
@@ -190,7 +206,7 @@ renderReact dr html = case html of
         where
           execAffHandler handler ev = case runWriter (unEventHandler (handler ev)) of
               (Tuple mf _) -> maybe (pure unit) dr mf
-          execHandler h e = unsafePerformEff $ handleAff $ execAffHandler h e
+          execHandler handler e = unsafePerformEff $ handleAff $ execAffHandler handler e
 
 
 handleAff :: forall eff a. Aff (err::EXCEPTION|eff) a -> Eff (err::EXCEPTION|eff) Unit
