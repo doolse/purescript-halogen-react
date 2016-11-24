@@ -64,21 +64,6 @@ type ReactSpecDriver p s f eff = {spec::ReactSpec p s (err::EXCEPTION |eff), dri
 
 foreign import createElementOneChild :: forall p. ReactClass p -> p -> ReactElement -> ReactElement
 
-type EventHandler =
-  forall eff refs.
-    Eff ( props :: React.ReactProps
-        , state :: React.ReactState React.ReadWrite
-        , refs :: React.ReactRefs refs
-        | eff
-        ) Unit
-
-type LifecycleReactComponentSpec2 p s f g  = {
-    render :: ((f Unit) -> EventHandler) -> p -> s -> ReactElement
-  , eval :: f ~> (ComponentDSL s f g)
-  , initializer :: Maybe (f Unit)
-  , finalizer :: Maybe (f Unit)
-}
-
 type LifecycleReactComponentSpec s f g  = {
     render :: s -> React (f Unit)
   , eval :: f ~> (ComponentDSL s f g)
