@@ -1,17 +1,18 @@
 module Halogen.React where
 
 import Prelude
+import Control.Monad.Aff (Aff)
 import Data.Exists (Exists)
 import Data.Function.Uncurried (mkFn3, mkFn2)
 import Data.Maybe (Maybe)
 import Halogen.HTML.Core (PropName)
 import Halogen.HTML.Events.Handler (EventHandler)
-import React (ReactElement, ReactClass)
+import React (ReactClass, ReactElement)
 import React.DOM.Props (Props)
 import Unsafe.Coerce (unsafeCoerce)
 
 data React i = Text String
-  | RenderedElement ReactElement
+  | RenderedElement forall eff. (i -> Aff eff Unit) -> ReactElement
   | Element (Exists ReactClass) (Array (Prop i)) (Array (React i))
   | NamedElement String (Array (Prop i)) (Array (React i))
 
@@ -39,3 +40,9 @@ mkHandler3 f = unsafeCoerce $ mkFn3 f
 data HandlerF i event = HandleUnit String (event -> EventHandler (Maybe i))
   | HandleUncurried String (UncurriedEvent event) (event -> EventHandler (Maybe i))
   | HandleAff String (event -> EventHandler (Maybe i))
+
+renderedElement :: forall i. ReactElement -> React i
+renderedElement = RenderedElement <<< const
+
+renderedElement' :: forall f. (forall eff. ((Unit -> f Unit) -> Aff eff Unit) -> ReactElement) -> React (f Unit)
+renderedElement' f = RenderedElement \d -> f (\a -> d $ a unit)

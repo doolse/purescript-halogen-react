@@ -53,7 +53,6 @@ import Halogen.React (PropsF(PropsF), runUncurriedEvent, HandlerF(..), PropF(Pro
 import React (ReactClass, ReactElement, ReactProps, ReactRefs, ReactSpec, ReactState, ReactThis, ReadOnly, ReadWrite, Refs, createClass, createElement, createElementTagName, getProps, getRefs, readState, spec, transformState)
 import React.DOM.Props (Props, unsafeMkProps, unsafeFromPropsArray)
 import Unsafe.Coerce (unsafeCoerce)
-import React as React
 
 type ReactEffects eff = (state::ReactState ReadWrite,props::ReactProps, refs::ReactRefs ReadOnly, err::EXCEPTION |eff)
 type ReactDriver f eff = f ~> Aff (ReactEffects eff)
@@ -166,7 +165,7 @@ queryRef refs n f action = fromAff $ maybe (pure Nothing) sendAction (getRef ref
 renderReact :: forall f eff. ReactDriver f eff -> React (f Unit) -> ReactElement
 renderReact dr html = case html of
     (Text s) -> unsafeCoerce s
-    (RenderedElement r) -> r
+    (RenderedElement f) -> f dr
     (NamedElement n props els) -> createElementTagName n  (runProps props) $ map go els
     (Element clazzE props els) -> runExists (\clazz -> createElement clazz (runProps props)) clazzE $ map go els
     where

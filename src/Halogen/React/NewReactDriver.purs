@@ -3,6 +3,7 @@ module Halogen.React.Dryver (
   ReactEffects,
   ReactComponent,
   ReactClassDriver,
+  EventHandler,
   interpretEval,
   interpretComponent,
   reactComponent,
