@@ -1,8 +1,11 @@
 module Halogen.React where
 
 import Prelude
-import Control.Monad.Aff (Aff)
+import Control.Monad.Aff (Aff, launchAff)
+import Control.Monad.Aff.Unsafe (unsafeCoerceAff)
+import Control.Monad.Eff.Unsafe (unsafeCoerceEff)
 import Data.Exists (Exists)
+import Data.Function.Eff (EffFn1, mkEffFn1)
 import Data.Function.Uncurried (mkFn3, mkFn2)
 import Data.Maybe (Maybe)
 import Halogen.HTML.Core (PropName)
@@ -44,5 +47,11 @@ data HandlerF i event = HandleUnit String (event -> EventHandler (Maybe i))
 renderedElement :: forall i. ReactElement -> React i
 renderedElement = RenderedElement <<< const
 
-renderedElement' :: forall f. (forall eff. ((Unit -> f Unit) -> Aff eff Unit) -> ReactElement) -> React (f Unit)
-renderedElement' f = RenderedElement \d -> f (\a -> d $ a unit)
+type AffDispatcher f = forall eff. (Unit -> f Unit) -> Aff eff Unit
+type Dispatcher f = forall a eff. (a -> Unit -> f Unit) -> EffFn1 eff a Unit
+
+renderedElement' :: forall f. ({dispatch::Dispatcher f, dispatchAff::AffDispatcher f} -> ReactElement) -> React (f Unit)
+renderedElement' f = RenderedElement \d -> f {
+      dispatchAff: \a -> unsafeCoerceAff $ d (a unit)
+    , dispatch: \f2 -> mkEffFn1 (\a -> void $ unsafeCoerceEff $ launchAff $ d (f2 a unit))
+  }

@@ -7,6 +7,7 @@
   ],
   "dependencies": {
     "purescript-halogen": "doolse/purescript-halogen#fix-unevent",
-    "purescript-react": "purescript-contrib/purescript-react"
+    "purescript-react": "purescript-contrib/purescript-react",
+    "purescript-eff-functions": "^2.0.0"
   }
 }
